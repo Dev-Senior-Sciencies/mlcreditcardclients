@@ -59,6 +59,9 @@ def main():
     data_path = os.path.join(file_path, "..", "data", "UCI_Credit_Card.csv")
     df = pd.read_csv(data_path)
 
+    for col in df.select_dtypes(include=['int']).columns:
+        df[col] = df[col].astype('float64')
+
     # Train model
     train(df, conf["parameters"])
 
