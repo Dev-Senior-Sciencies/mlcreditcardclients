@@ -7,23 +7,23 @@
 
 ### Pre-reqs
 
-* Python 3 (I specifically use 3.9.12, but should work in other versions)
-* Git
-* Knowledge about Machine Learning Models
+- Python 3 (I specifically use 3.13, but should work in other versions)
+- Git
+- Knowledge about Machine Learning Models
 
 ### Setting up your working environment
 
 1. Clone this repo
 
 ```console
-git clone git@github.com:Dev-Senior-Sciencies/mlflow.git
+git clone git@github.com:Dev-Senior-Sciencies/mlcreditcardclients.git
 ```
 
 2. Create a Python venv
 
-    There are many ways to do that. I'll use the simple one, but you can use your preferable.
+   There are many ways to do that. I'll use the simple one, but you can use your preferable.
 
-    Inside of the clonned path run:
+   Inside of the clonned path run:
 
 ```console
 py -m venv .env
@@ -32,6 +32,7 @@ py -m venv .env
 3. Activate venv
 
 > For Linux:
+
 ```console
 source .env/bin/activate
 ```
@@ -42,12 +43,26 @@ source .env/bin/activate
 .env/Scripts/Activate
 ```
 
+> or deactivate
 
+```console
+deactivate
+```
 
 3. Install requirements.txt
 
 ```console
 pip install -r requirements.txt
+```
+
+> or new dependencies
+
+```console
+pip install tensorflow scikit-learn matplotlib mlflow omegaconf
+```
+
+```console
+pip freeze > requirements.txt
 ```
 
 ## Dataset
