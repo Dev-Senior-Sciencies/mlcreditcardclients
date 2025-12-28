@@ -1,6 +1,7 @@
 parameters:
   epochs: 100
   epochs_cross: 30
+  cv_folds: 3
   max_depth: 1
   random_state: 1
   verbose: 0
