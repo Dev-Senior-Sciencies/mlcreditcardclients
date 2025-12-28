@@ -1,4 +1,4 @@
-# MLFlow
+# Ml Credit Card Clients
 
 1. [Setup](#setup)
 1. [Dataset](#dataset)

@@ -1,8 +1,11 @@
 parameters:
-  n_estimators: 100
-  max_depth: 20
-  random_state: 23
+  epochs: 100
+  epochs_cross: 30
+  max_depth: 1
+  random_state: 1
   verbose: 0
+  learning_rate: 0.01
+  test_size: 0.3
 
 tracking_uri:
-  experiment_name: credit-card-exp
+  experiment_name: "credit-card-exp"

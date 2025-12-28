@@ -1,70 +1,101 @@
 import os
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
-from sklearn.metrics import roc_auc_score
-from lightgbm import LGBMClassifier
+import numpy as np
+import matplotlib.pyplot as plt
+
 from omegaconf import OmegaConf
 import mlflow
 
-# Path to train.py
-file_path = os.path.dirname(__file__)
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
 
-# Read configuration file
+import tensorflow as tf
+
+Dense = tf.keras.layers.Dense
+Input = tf.keras.layers.Input
+Sequential = tf.keras.Sequential
+MeanSquaredError = tf.keras.losses.MeanSquaredError
+BinaryCrossentropy = tf.keras.losses.BinaryCrossentropy
+Sigmoid = tf.keras.activations.sigmoid
+
+file_path = os.getcwd()
 conf = OmegaConf.load(os.path.join(file_path, "config.yml"))
+mlflow.set_experiment(conf["tracking_uri"]["experiment_name"])
 
-mlflow.set_experiment("credit-card-exp")
+data_path = os.path.join(file_path, "..", "data", "UCI_Credit_Card.csv")
+
+df = pd.read_csv(data_path)
+
+lambdas = [0.0, 0.001, 0.01, 0.05, 0.1, 0.2, 0.3]
 
 def train(df, params):
-    with mlflow.start_run():
-        # Get features and target name
-        features = df.columns.to_list()[1:-1]
-        target = df.columns.to_list()[-1]
+        
+        x = df[['PAY_0', 'PAY_2', 'PAY_3', 'PAY_4', 'PAY_5', 'PAY_6']]
+        y = df['default.payment.next.month']
 
-        # Train test split
-        df_train, df_test = train_test_split(df, test_size=0.3, random_state=23)
-        mlflow.log_params(params)
-        # Train model
-        clf = LGBMClassifier(**params)
-        clf.fit(df_train[features], df_train[target])
+        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=params["test-size"], random_state=params["random_state"])
+        
+        scaler = MinMaxScaler()
 
-        signature = mlflow.models.infer_signature(df_train[features], clf.predict(df_train[features]))
+        X_train = scaler.fit_transform(x_train)
 
-        mlflow.sklearn.log_model(
-            clf,
-            "model",
-            signature=signature,
-            input_example=df_train[features].iloc[:2]
-        )
+        X_test = scaler.transform(x_test)
 
-        # Evaluate
-        gini_train = (
-            2 * roc_auc_score(df_train[target], clf.predict_proba(df_train[features])[:, 1])
-            - 1
-        )
-        gini_test = (
-            2 * roc_auc_score(df_test[target], clf.predict_proba(df_test[features])[:, 1])
-            - 1
-        )
-        mlflow.log_metrics({"gini_train": gini_train})
-        mlflow.log_metrics({"gini_test": gini_test})
+        results = []
 
-        # Show results
-        print(f"Gini train: {gini_train:.3f}")
-        print(f"Gini test:  {gini_test:.3f}")
+        for lambda_ in lambdas:
 
+            model = Sequential(
+                    [
+                            Dense(64, activation = 'relu', name = 'layer1', kernel_regularizer=tf.keras.regularizers.l2(lambda_)),
+                            Dense(32, activation = 'relu', name = 'layer2', kernel_regularizer=tf.keras.regularizers.l2(lambda_)),
+                            Dense(1, activation = 'linear', name = 'layer3')
+                    ],
+                    name = "credit_card_model"
+            )
+
+            model.compile(
+                    optimizer=tf.keras.optimizers.Adam(learning_rate=params["learning_rate"]),
+                    loss=BinaryCrossentropy(from_logits=True)
+            )
+
+            model.fit(
+                    X_train, y_train,
+                    epochs=params["epochs"],
+                    verbose=params["verbose"]
+            )
+
+            logits = model(X_test)
+
+            y_pred_proba = tf.nn.sigmoid(logits).numpy().ravel()
+
+            y_pred = (y_pred_proba > 0.5).astype(int)
+
+            acc = accuracy_score(y_test, y_pred)
+
+            roc_auc = roc_auc_score(y_test, y_pred_proba)
+
+            results.append({
+            "lambda": lambda_,
+            "accuracy": acc,
+            "roc_auc": roc_auc,
+            "model": model
+            })
+
+            print(f"λ={lambda_} | Accuracy={acc:.4f} | ROC-AUC={roc_auc:.4f}")
+
+        best_model = max(results, key=lambda x: x["roc_auc"])
+
+        print("\n🏆 Melhor Modelo:")
+        
+        print(best_model["lambda"], best_model["roc_auc"])
+        
+        return best_model
 
 def main():
     # Load data
-    data_path = os.path.join(file_path, "..", "data", "UCI_Credit_Card.csv")
-    df = pd.read_csv(data_path)
-
-    for col in df.select_dtypes(include=['int']).columns:
-        df[col] = df[col].astype('float64')
-
-    # Train model
     train(df, conf["parameters"])
-
 
 if __name__ == "__main__":
     main()
